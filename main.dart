@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'home_screen.dart';
+import 'api_file.dart';
+
 
 void main() {
   runApp(HealthCareInventoryApp());
@@ -29,57 +29,56 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController login_ID = TextEditingController();
   final TextEditingController password = TextEditingController();
 
-  Future<void> login() async {
-    print("yes5 here we are");
-    String loginId = login_ID.text;
-    String pass = password.text;
 
-    if (loginId.isNotEmpty && pass.isNotEmpty) {
-      try {
-        String uri = "http://127.0.0.1/User_table/User.php";
-        var res = await http.post(Uri.parse(uri), body: {
-          "action":"login",
-          "login_ID": loginId,
-          "password": pass,
-        });
-        var response = jsonDecode(res.body);
-        print(response);
-        if (response["success"] == true) {
-          print("login successfully");
-           login_ID.clear();
-          password.clear();
-           Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => HomeScreen()),
-          );
-        } else {
-          // Show an error message
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('Error'),
-                content: Text('Wrong credentials. Please try again.'),
-                actions: <Widget>[
-                  TextButton(
-                    child: Text('OK'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ],
-              );
-            },
-          );
-        
-        } 
-      } catch (e) {
-        print(e);
+  Future<void> login(BuildContext context, TextEditingController login_ID, TextEditingController password) async {
+  print("Yes, here we are");
+  String loginId = login_ID.text;
+  String pass = password.text;
+
+  if (loginId.isNotEmpty && pass.isNotEmpty) {
+    try {
+      var data = {
+        "login_ID": loginId,
+        "password": pass,
+      };
+      var response = await postDataToServer("login", data);
+      print(response);
+
+      if (response["success"] == true) {
+        print("Login successful");
+        login_ID.clear();
+        password.clear();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()), // Adjust this according to your project structure
+        );
+      } else {
+        // Show an error message
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Error'),
+              content: Text('Wrong credentials. Please try again.'),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
       }
-    } else {
-      print("Please fill all fields!");
+    } catch (e) {
+      print(e);
     }
+  } else {
+    print("Please fill all fields!");
   }
+}
 
  
 
@@ -147,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: login,
+                      onPressed: () => login(context, login_ID, password),
                       child: Text('Login'),
                     ),
                   ],
