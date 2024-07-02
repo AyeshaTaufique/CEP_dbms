@@ -1,157 +1,573 @@
-<?php
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
-header('Access-Control-Allow-Headers: X-Requested-With, Content-Type, Accept');
-header('Content-Type: application/json'); // Ensure the response is JSON
+import 'package:flutter/material.dart';
+import 'api_file.dart';
 
-include("dbconnection.php");
-$con = dbconnection();  // Assuming dbconnection() establishes database connection
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $response = array();
-
-    if (isset($_POST["action"])) {
-        $action = $_POST["action"];
-
-        if ($action === "login") {
-            if (isset($_POST["login_ID"]) && isset($_POST["password"])) {
-                $login_ID = $_POST["login_ID"];
-                $password = $_POST["password"];
-
-                $query = "SELECT * FROM `user` WHERE `login_ID` = '$login_ID' AND `password` = '$password' AND `status` = 'Active'";
-                $exe = mysqli_query($con, $query);
-
-                if ($exe && mysqli_num_rows($exe) > 0) {
-                    $response["success"] = true;
-                } else {
-                    $response["success"] = false;
-                    $response["message"] = "Login failed. Invalid credentials or user is inactive.";
-                }
-            } else {
-                $response["success"] = false;
-                $response["message"] = "Missing login_ID or password";
-            }
-        } elseif ($action === "add_user") {
-            if (isset($_POST["name"]) && isset($_POST["email"]) && isset($_POST["login_ID"]) && isset($_POST["address"]) && isset($_POST["status"]) && isset($_POST["ph_num"]) && isset($_POST["password"])) {
-                $name = $_POST["name"];
-                $email = $_POST["email"];
-                $login_ID = $_POST["login_ID"];
-                $password = $_POST["password"];
-                $address = $_POST["address"];
-                $ph_num = $_POST["ph_num"];
-                $status = $_POST["status"];
-
-                $query = "INSERT INTO `user` (`login_ID`, `Name`, `Email`, `Address`, `ph_num`, `Status`, `password`)
-                          VALUES ('$login_ID','$name','$email','$address','$ph_num', '$status', '$password')";
-
-                $exe = mysqli_query($con, $query);
-
-                if ($exe) {
-                    $response["success"] = true;
-                    $response["message"] = "User added successfully";
-                } else {
-                    $response["success"] = false;
-                    $response["message"] = "Failed to add user";
-                }
-            } else {
-                $response["success"] = false;
-                $response["message"] = "Missing required fields";
-            }
-        } elseif ($action === "fetch_data") {
-            $query = "SELECT * FROM `user`";
-            $exe = mysqli_query($con, $query);
-            $users = array();
-
-            while ($row = mysqli_fetch_assoc($exe)) {
-                $users[] = $row;
-            }
-
-            $response["success"] = true;
-            $response["data"] = $users;
-        } elseif ($action === "update_user") {
-            if (isset($_POST["login_ID"]) && isset($_POST["password"])) {
-                $login_ID = $_POST["login_ID"];
-                $password = $_POST["password"];
-
-                // Check if user exists with provided login_ID and password
-                $query_check = "SELECT * FROM `user` WHERE `login_ID` = '$login_ID' AND `password` = '$password'";
-                $exe_check = mysqli_query($con, $query_check);
-
-                if ($exe_check && mysqli_num_rows($exe_check) > 0) {
-                    // Update user details
-                    $name = isset($_POST["name"]) ? $_POST["name"] : '';
-                    $email = isset($_POST["email"]) ? $_POST["email"] : '';
-                    $address = isset($_POST["address"]) ? $_POST["address"] : '';
-                    $ph_num = isset($_POST["ph_num"]) ? $_POST["ph_num"] : '';
-                    $status = isset($_POST["status"]) ? $_POST["status"] : '';
-                    $password = isset($_POST["password"]) ? $_POST["password"] : '';
-
-                    $query_update = "UPDATE `user` SET 
-                                    `Name`='$name', 
-                                    `Email`='$email', 
-                                    `Address`='$address', 
-                                    `ph_num`='$ph_num', 
-                                    `Status`='$status', 
-                                    `password`='$password' 
-                                    WHERE `login_ID`='$login_ID'";
-
-                    $exe_update = mysqli_query($con, $query_update);
-
-                    if ($exe_update) {
-                        $response["success"] = true;
-                        $response["message"] = "User updated successfully";
-                    } else {
-                        $response["success"] = false;
-                        $response["message"] = "Failed to update user";
-                    }
-                } else {
-                    $response["success"] = false;
-                    $response["message"] = "User not found or invalid credentials";
-                }
-            } else {
-                $response["success"] = false;
-                $response["message"] = "Missing login_ID or password";
-            }
-        } elseif ($action === "delete") {
-            if (isset($_POST["login_ID"]) && isset($_POST["password"])) {
-                $login_ID = $_POST["login_ID"];
-                $password = $_POST["password"];
-
-                // Check if user exists with provided login_ID and password
-                $query_check = "SELECT * FROM `user` WHERE `login_ID` = '$login_ID' AND `password` = '$password'";
-                $exe_check = mysqli_query($con, $query_check);
-
-                if ($exe_check && mysqli_num_rows($exe_check) > 0) {
-                    $query_del = "DELETE FROM `user` WHERE `login_ID` = '$login_ID' AND `password` = '$password'";
-                    $exe_del = mysqli_query($con, $query_del);
-
-                    if ($exe_del) {
-                        $response["success"] = true;
-                        $response["message"] = "User deleted successfully";
-                    } else {
-                        $response["success"] = false;
-                        $response["message"] = "Failed to delete user";
-                    }
-                } else {
-                    $response["success"] = false;
-                    $response["message"] = "User not found";
-                }
-            } else {
-                $response["success"] = false;
-                $response["message"] = "Missing login_ID or password";
-            }
-        } else {
-            $response["success"] = false;
-            $response["message"] = "Invalid action specified";
-        }
-    } else {
-        $response["success"] = false;
-        $response["message"] = "No action specified";
-    }
-} else {
-    $response["success"] = false;
-    $response["message"] = "Invalid request method";
+class UserManagementBox extends StatefulWidget {
+  @override
+  _UserManagementBoxState createState() => _UserManagementBoxState();
 }
 
-echo json_encode($response);
-?>
+class _UserManagementBoxState extends State<UserManagementBox> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
+  final _loginIdController = TextEditingController();
+  final _passwordController = TextEditingController();
+  String _status = 'Active';
+
+ List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _filteredUsers = [];
+  TextEditingController _searchController = TextEditingController();
+
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUsers();
+    _searchController.addListener(_filterUsers);
+  }
+
+ Future<void> _fetchUsers() async {
+    try {
+      var response = await postDataToServer("fetch_data", {});
+      if (response["success"] == true) {
+        setState(() {
+          _users = List<Map<String, dynamic>>.from(response["data"]);
+          _filteredUsers = List.from(_users);
+        });
+      } else {
+        print('Failed to load users');
+      }
+    } catch (e) {
+      print('Error fetching users: $e');
+    }
+  }
+
+void _filterUsers() {
+    setState(() {
+      String query = _searchController.text.toLowerCase();
+      _filteredUsers = _users
+          .where((user) => user['Name'].toLowerCase().contains(query))
+          .toList();
+    });
+  }
+
+ 
+      
+
+
+
+
+  // Show dialog to update user information
+  void showUpdateDialog(Map<String, dynamic> user) {
+  _nameController.text = user['Name'] ?? '';
+  _addressController.text = user['Address'] ?? '';
+  _emailController.text = user['Email'] ?? '';
+  _phoneNumberController.text = user['ph_num'] ?? '';
+  _passwordController.text=user['password'] ?? '';
+  _loginIdController.text = user['login_ID'] ?? '';
+   _status = user['Status'] ?? 'Active'; // Set a default status if null
+
+  if (!['Active', 'Inactive'].contains(_status)) {
+    _status = 'Active'; // Default to 'Active' if status is invalid
+  }
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Update User'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(labelText: 'Name'),
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: _addressController,
+                decoration: InputDecoration(labelText: 'Address'),
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: _phoneNumberController,
+                decoration: InputDecoration(labelText: 'Phone Number'),
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: _loginIdController,
+                decoration: InputDecoration(labelText: 'Login ID'),
+              ),
+              SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: _status,
+                items: ['Active', 'Inactive']
+                    .map((value) => DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _status = value!;
+                  });
+                },
+                decoration: InputDecoration(
+                  labelText: 'Status',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () async {
+              _saveUser();
+              Navigator.of(context).pop();
+            },
+          ),
+          ElevatedButton(
+            child: Text('Update'),
+            onPressed: () async {
+              await updateUser();
+              Navigator.of(context).pop();
+            },
+          ), // Adjust the width as needed
+                ElevatedButton(
+                  onPressed:() async{ await delete();
+                  Navigator.of(context).pop();},
+                  child: Text('Delete'),
+                ),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> updateUser() async {
+  try {
+    var data = {
+      "action": "update_user",
+      "login_ID": _loginIdController.text,
+      "password": _passwordController.text,
+      "email": _emailController.text,
+      "ph_num": _phoneNumberController.text,
+      "status": _status,
+      "address": _addressController.text,
+      "name": _nameController.text,
+    };
+    print(_passwordController.text);
+    var response = await postDataToServer("update_user", data);
+    print(response);
+
+    if (response["success"] == true) {
+      _saveUser(); // Example method to save user data locally
+      _fetchUsers(); // Example method to fetch updated user list
+      
+    } else {
+      showErrorDialog('Failed to update user. Please try again.');
+    }
+  } catch (e) {
+    print('Error updating user: $e');
+    showErrorDialog('An unexpected error occurred. Please try again later.');
+  }
+}
+
+void showErrorDialog(String message) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Error'),
+        content: Text(message),
+        actions: <Widget>[
+          TextButton(
+            child: Text('OK'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
+
+
+  void _saveUser() {
+    if (_formKey.currentState!.validate()) {
+      _nameController.clear();
+      _addressController.clear();
+      _emailController.clear();
+      _phoneNumberController.clear();
+      _loginIdController.clear();
+      _passwordController.clear();
+      setState(() {
+        _status = 'Active';
+      });
+    }
+  }
+
+  Future<void> insert() async {
+    String name = _nameController.text;
+    String address = _addressController.text;
+    String email = _emailController.text;
+    String ph_num = _phoneNumberController.text;
+    String login_ID = _loginIdController.text;
+    String password = _passwordController.text;
+    final status = _status;
+
+    if (name.isEmpty ||
+        address.isEmpty ||
+        login_ID.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Error'),
+            content: Text('Please fill all required fields.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    try {
+      var data = {
+        "action": "add_user",
+        "login_ID": login_ID,
+        "password": password,
+        "email": email,
+        "ph_num": ph_num,
+        "status": status,
+        "address": address,
+        "name": name
+      };
+      
+      var response = await postDataToServer("add_user", data);
+      print(response);
+
+      if (response["success"] == true) {
+        _saveUser(); // Example method to save user data locally
+        _fetchUsers(); // Example method to fetch updated user list
+      } else {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Error'),
+              content: Text('Failed to add user. Please try again.'),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      print('Error adding user: $e');
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Error'),
+            content: Text('An unexpected error occurred. Please try again later.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+   Future<void> delete() async {
+    String login_ID = _loginIdController.text;
+    String password = _passwordController.text;
+
+    if (login_ID.isNotEmpty && password.isNotEmpty) {
+      try {
+        var data = {
+          "action": "delete",
+          "login_ID": login_ID,
+          "password": password,
+        };
+        
+        var response = await postDataToServer("delete", data);
+        print("Response body: $response"); // Print raw response for debugging
+
+        if (response["success"] == true) {
+          print("Deleted successfully");
+          _saveUser(); // Example method to save user data locally
+          _fetchUsers(); // Example method to fetch updated user list
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("User deleted successfully"),
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Clear text fields after 2 seconds
+          Future.delayed(Duration(seconds: 2), () {
+            _loginIdController.clear();
+            _passwordController.clear();
+          });
+        } else {
+          print("Delete failed: ${response['message'] ?? 'Unknown error'}");
+          // Show error message to user
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Error'),
+                content: Text('Failed to delete user. Please try again.'),
+                actions: <Widget>[
+                  TextButton(
+                    child: Text('OK'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      } catch (e) {
+        print("Error occurred: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error occurred: $e")),
+        );
+      }
+    } else {
+      print("Login ID and password cannot be empty");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login ID and password cannot be empty")),
+      );
+    }
+  }
+
+@override
+Widget build(BuildContext context) {
+  return AlertDialog(
+    title: Text('Manage User'),
+    content: SizedBox(
+      width: double.maxFinite,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: 'Search',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                ),
+                SizedBox(height: 10),
+                Expanded(
+                  child: Scrollbar(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columnSpacing: 20,
+                          columns: [
+                            DataColumn(label: Text('Update')),
+                            DataColumn(label: Text('Name')),
+                            DataColumn(label: Text('User_ID')),
+                            DataColumn(label: Text('Email')),
+                            DataColumn(label: Text('Phone Number')),
+                            DataColumn(label: Text('Status')),
+                            DataColumn(label: Text('Address')),
+                          ],
+                          rows: _filteredUsers.map<DataRow>((user) {
+                            return DataRow(
+                              cells: [
+                                DataCell(IconButton(
+                                  icon: Icon(Icons.edit),
+                                  onPressed: () {
+                                    showUpdateDialog(user);
+                                  },
+                                )),
+                                DataCell(Text(user['Name'] ?? '')),
+                                DataCell(Text(user['login_ID'] ?? '')),
+                                DataCell(Text(user['Email'] ?? '')),
+                                DataCell(Text(user['ph_num'] ?? '')),
+                                DataCell(Text(user['Status'] ?? '')),
+                                DataCell(Text(user['Address'] ?? '')),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 20),
+          Expanded(
+            flex: 1,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Container(
+                padding: EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: InputDecoration(labelText: 'Name'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a name';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _addressController,
+                        decoration: InputDecoration(labelText: 'Address'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter an address';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: InputDecoration(labelText: 'Email'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter an email';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _phoneNumberController,
+                        decoration:
+                            InputDecoration(labelText: 'Phone Number'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a phone number';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _loginIdController,
+                        decoration: InputDecoration(labelText: 'Login ID'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a login ID';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(labelText: 'Password'),
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a password';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        value: _status,
+                        items: ['Active', 'Inactive']
+                            .map((value) => DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _status = value!;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Status',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton(
+                            onPressed: insert,
+                            child: Text('Save'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () {
+          Navigator.of(context).pop();
+        },
+        child: Text('Close'),
+      ),
+    ],
+  );
+}
+}
