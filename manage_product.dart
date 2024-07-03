@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api_file.dart';
-import 'manage_catagory.dart';
+
 
 
 class ProductManagementBox extends StatefulWidget {
@@ -13,20 +13,41 @@ class _ProductManagementBoxState extends State<ProductManagementBox> {
   final _productNameController = TextEditingController();
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  
   final _categoryIdController = TextEditingController();
 
   final _searchController = TextEditingController();
 
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _filteredProducts = [];
-
+  List<Map<String,dynamic>> _Catagory=[];
+ String? _selectedCategory;
   @override
   void initState() {
     super.initState();
     _fetchProducts();
     _searchController.addListener(_filterProducts);
+    _fetch_Catagory();
+     
+}
+  
+   
+Future<void> _fetchCatagory() async {
+    try {
+      var response = await CatagoryDataFromServer("fetch_catagory", {});
+      if (response["success"] == true) {
+        setState(() {
+          _Catagory = List<Map<String, dynamic>>.from(response["data"]);
+          
+        });
+      } else {
+        print('Failed to load catagory');
+      }
+    } catch (e) {
+      print('Error fetching catagory: $e');
+    }
   }
+
 
   Future<void> _fetchProducts() async {
     try {
@@ -47,7 +68,7 @@ class _ProductManagementBoxState extends State<ProductManagementBox> {
   void _filterProducts() {
     setState(() {
       _filteredProducts = _products.where((product) {
-        return product['product_name']
+        return product['prod_name']
             .toLowerCase()
             .contains(_searchController.text.toLowerCase());
       }).toList();
@@ -56,12 +77,12 @@ class _ProductManagementBoxState extends State<ProductManagementBox> {
 
 
 
- void showUpdateDialog(Map<String, dynamic> product) {
-    _productNameController.text = product['product_name'] ?? '';
-    _priceController.text = product['price']?.toString() ?? '';
-    _stockController.text = product['stock']?.toString() ?? '';
-    _descriptionController.text = product['description'] ?? '';
-    _categoryIdController.text = product['category_id']?.toString() ?? '';
+ void showUpdateDialog(Map<String, dynamic> product_catagory_view) {
+    _productNameController.text = product_catagory_view['prod_name'] ?? '';
+    _priceController.text = product_catagory_view['price']?.toString() ?? '';
+    _stockController.text = product_catagory_view['stock']?.toString() ?? '';
+    
+    _categoryIdController.text = product_catagory_view['catagory_name']?.toString() ?? '';
 
     showDialog(
       context: context,
@@ -87,12 +108,8 @@ class _ProductManagementBoxState extends State<ProductManagementBox> {
                   keyboardType: TextInputType.number,
                 ),
                 TextFormField(
-                  controller: _descriptionController,
-                  decoration: InputDecoration(labelText: 'Description'),
-                ),
-                TextFormField(
                   controller: _categoryIdController,
-                  decoration: InputDecoration(labelText: 'Category ID'),
+                  decoration: InputDecoration(labelText: 'Category'),
                   keyboardType: TextInputType.number,
                 ),
               ],
@@ -108,13 +125,13 @@ class _ProductManagementBoxState extends State<ProductManagementBox> {
             ElevatedButton(
               child: Text('Update'),
               onPressed: () async {
-                await updateProduct(product);
+                await updateProduct(product_catagory_view);
                 Navigator.of(context).pop();
               },
             ),
             ElevatedButton(
               onPressed: () async {
-                await deleteProduct(product);
+                await deleteProduct(product_catagory_view);
                 Navigator.of(context).pop();
               },
               child: Text('Delete'),
@@ -126,24 +143,31 @@ class _ProductManagementBoxState extends State<ProductManagementBox> {
   }
 
   Future<void> updateProduct(Map<String, dynamic> product) async {
-    String productId = product['product_id']?.toString() ?? '0'; // Replace 'product_id' with your actual identifier
-
+    String productId = product['prod_ID']?.toString() ?? '0'; // Replace 'product_id' with your actual identifier
+    String catagory_ID= product['catagory_ID'] ?? 0;
     try {
       var data = {
         "action": "update_product",
-        "product_id": productId,
-        "product_name": _productNameController.text,
+        "prod_ID": productId,
+        "prod_name": _productNameController.text,
         "price": _priceController.text,
         "stock": _stockController.text,
-        "description": _descriptionController.text,
-        "category_id": _categoryIdController.text,
+        
+        "catagory_ID": catagory_ID,
       };
-
+      
       var response = await ProductDataFromServer("update_product", data);
 
       if (response["success"] == true) {
         // Handle success, e.g., refresh product list
+          _productNameController.clear();
+    _priceController.clear();
+    _stockController.clear();
+   
+    _categoryIdController.clear();
+        
         _fetchProducts();
+       
       } else {
         showErrorDialog('Failed to update product. Please try again.');
       }
@@ -158,7 +182,7 @@ void _saveProduct() {
     _productNameController.clear();
     _priceController.clear();
     _stockController.clear();
-    _descriptionController.clear();
+   
     _categoryIdController.clear();
   }
 }
@@ -168,7 +192,6 @@ void _saveProduct() {
   String productName = _productNameController.text;
   String price = _priceController.text;
   String stock = _stockController.text;
-  String description = _descriptionController.text;
   String categoryId = _categoryIdController.text;
 
   // Validate required fields
@@ -196,16 +219,16 @@ void _saveProduct() {
   try {
     var data = {
       "action": "add_product",
-      "product_name": productName,
+      "prod_name": productName,
       "price": price,
       "stock": stock,
-      "description": description,
-      "category_id": categoryId,
+      "catagory_ID": categoryId,
     };
 
     var response = await ProductDataFromServer("add_product", data);
-
+    print(response["success"]);
     if (response["success"] == true) {
+    
       _saveProduct(); // Clear form fields after successful insert
       _fetchProducts(); // Refresh product list
     } else {
@@ -248,14 +271,30 @@ void _saveProduct() {
     );
   }
 }
+Future<void> _fetch_Catagory() async {
+    try {
+      var response = await CatagoryDataFromServer("fetch_catagory", {});
+      if (response["success"] == true) {
+        setState(() {
+          _Catagory = List<Map<String, dynamic>>.from(response["data"]);
+          
+        });
+      } else {
+        print('Failed to load catagory');
+      }
+    } catch (e) {
+      print('Error fetching catagory: $e');
+    }
+  }
+
 
    Future<void> deleteProduct(Map<String, dynamic> product) async {
-    String productId = product['product_id']?.toString() ?? '0'; // Replace 'product_id' with your actual identifier
+    String productId = product['prod_ID']?.toString() ?? '0'; // Replace 'product_id' with your actual identifier
 
     try {
       var data = {
         "action": "delete_product",
-        "product_id": productId,
+        "prod_ID": productId,
       };
 
       var response = await ProductDataFromServer("delete_product", data);
@@ -263,6 +302,7 @@ void _saveProduct() {
       if (response["success"] == true) {
         // Handle success, e.g., refresh product list
         _fetchProducts();
+        _saveProduct();
       } else {
         showErrorDialog('Failed to delete product. Please try again.');
       }
@@ -314,40 +354,44 @@ Widget build(BuildContext context) {
                   ),
                 ),
                 SizedBox(height: 10),
-                Expanded(child:Scrollbar(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
-                    child:SingleChildScrollView(scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columnSpacing: 20,
-                      columns: [
-                        DataColumn(label: Text('Update')),
-                        DataColumn(label: Text('Name')),
-                        DataColumn(label: Text('Price')),
-                        DataColumn(label: Text('Stock')),
-                        DataColumn(label: Text('Description')),
-                        DataColumn(label: Text('Category ID')),
-                      ],
-                      rows: _filteredProducts.map<DataRow>((product) {
-                        return DataRow(
-                          cells: [
-                            DataCell(IconButton(
-                              icon: Icon(Icons.edit),
-                              onPressed: () {
-                                showUpdateDialog(product);
-                              },
-                            )),
-                            DataCell(Text(product['product_name'] ?? '')),
-                            DataCell(Text(product['price']?.toString() ?? '')),
-                            DataCell(Text(product['stock']?.toString() ?? '')),
-                            DataCell(Text(product['description'] ?? '')),
-                            DataCell(Text(product['category_id']?.toString() ?? '')),
+                Expanded(
+                  child: Scrollbar(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columnSpacing: 20,
+                          columns: [
+                            DataColumn(label: Text('Update')),
+                            DataColumn(label: Text('Name')),
+                            DataColumn(label: Text('Price')),
+                            DataColumn(label: Text('Stock')),
+                            DataColumn(label: Text('Category')),
                           ],
-                        );
-                      }).toList(),
+                          rows: _filteredProducts.map<DataRow>((product_catagory_view) {
+                            return DataRow(
+                              cells: [
+                                DataCell(
+                                  IconButton(
+                                    icon: Icon(Icons.edit),
+                                    onPressed: () {
+                                      showUpdateDialog(product_catagory_view);
+                                    },
+                                  ),
+                                ),
+                                DataCell(Text(product_catagory_view['prod_name'] ?? '')),
+                                DataCell(Text(product_catagory_view['price']?.toString() ?? '')),
+                                DataCell(Text(product_catagory_view['stock']?.toString() ?? '')),
+                                DataCell(Text(product_catagory_view['catagory_name']?.toString() ?? '')),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
                     ),
-                   ), ),
-             ), ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -397,29 +441,39 @@ Widget build(BuildContext context) {
                           return null;
                         },
                       ),
-                      SizedBox(height: 10),
-                      TextFormField(
-                        controller: _descriptionController,
-                        decoration: InputDecoration(labelText: 'Description'),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter a description';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 10),
-                      TextFormField(
-                        controller: _categoryIdController,
-                        decoration: InputDecoration(labelText: 'Category ID'),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter a category ID';
-                          }
-                          return null;
-                        },
-                      ),
+                      
+                      
+                      
+SizedBox(height: 10),
+      DropdownButtonFormField<String>(
+        value: _selectedCategory,
+        items: _Catagory.map((catagory) {
+          String displayValue = '${catagory['catagory_ID']} - ${catagory['catagory_name']}';
+          return DropdownMenuItem<String>(
+            value: displayValue,
+            child: Text(displayValue),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedCategory = value; // Update selected category
+            _categoryIdController.text = value!.split('')[0]; // Set category ID in text field
+          });
+        },
+        decoration: InputDecoration(
+          labelText: 'Category',
+          border: OutlineInputBorder(),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select a category';
+          }
+          return null;
+        },
+      ),
+     
+  
+                      
                       SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
